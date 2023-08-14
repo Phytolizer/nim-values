@@ -222,7 +222,7 @@ proc isZero*(v: Value): bool =
   of valFloat:
     result = v.floatVal == 0
   of valString:
-    result = v.strVal == nil or v.strVal == ""
+    result = v.strVal == ""
   of valPointer:
     result = v.pointerVal == nil
   of valObj:
