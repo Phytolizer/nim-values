@@ -18,7 +18,7 @@ import tables
 from json import nil
 from strutils import parseBiggestInt, parseFloat, parseBool, parseInt, splitLines, format
 from sequtils import toSeq
-from times import parse, format, `==`, Time, TimeInfo
+from times import parse, format, `==`, Time, DateTime
 import hashes
 
 ###########
@@ -78,7 +78,7 @@ type
       strVal: string
 
     of valTime:
-      timeVal: times.TimeInfo
+      timeVal: times.DateTime
 
     of valSeq, valSet:
       seqVal: seq[ValueRef]
@@ -315,7 +315,7 @@ proc toValue*[T](val: T): Value =
 
   when val is times.Time:
     result = Value(kind: valTime, timeVal: times.getLocalTime(val))
-  when val is times.TimeInfo:
+  when val is times.DateTime:
     result = Value(kind: valTime, timeVal: val)
 
   when val is seq or val is array:
@@ -693,7 +693,7 @@ proc determineValueKind*(x: string): ValueKind =
     result = valString
   of "pointer", "ptr":
     result = valPointer
-  of "Time", "TimeInfo":
+  of "Time", "DateTime":
     result = valTime
   else:
     result = valUnknown
@@ -723,7 +723,7 @@ proc determineValueKind*(x: typedesc): ValueKind =
   when x is string:
     result = valString
 
-  when x is times.Time or x is times.TimeInfo:
+  when x is times.Time or x is times.DateTime:
     result = valTime
 
   when x is seq or x is array:
@@ -969,10 +969,10 @@ proc asString*(v: ValueRef): string =
 
 # Time.
 
-proc getTime*(v: Value): times.TimeInfo =
+proc getTime*(v: Value): times.DateTime =
   v.timeVal
 
-proc getTime*(v: ValueRef): times.TimeInfo =
+proc getTime*(v: ValueRef): times.DateTime =
   v.timeVal
 
 # Sequence, set, map.
@@ -1048,7 +1048,7 @@ proc `[]`*(v: Value, typ: typedesc): any =
 
   when typ is times.Time:
     result = times.timeInfoToTime(v.getTime())
-  when typ is times.TimeInfo:
+  when typ is times.DateTime:
     result = v.getTime()
 
   # TODO: object, sequence.
