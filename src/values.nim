@@ -21,6 +21,8 @@ from sequtils import toSeq
 from times import parse, format, `==`, Time, DateTime
 import hashes
 
+{.experimental: "dotOperators".}
+
 ###########
 # Errors. #
 ###########
