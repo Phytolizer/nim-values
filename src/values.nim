@@ -1081,7 +1081,7 @@ proc toValueRef*(n: json.JsonNode): ValueRef =
     result.kind = valNil 
   of json.JObject:
     result = newValueMap()
-    for item in n.fields:
+    for item in json.pairs(n):
       result[item.key] = toValueRef(item.val)
   of json.JArray:
     new(result)
