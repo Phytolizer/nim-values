@@ -1009,7 +1009,7 @@ proc getSet*(v: ValueRef): seq[ValueRef] =
 
 # Typed accessor.
 
-proc `[]`*(v: Value, typ: typedesc): any =
+proc `[]`*(v: Value, typ: typedesc): auto =
   when typ is bool:
     result = v.asBool()
 
@@ -1055,7 +1055,7 @@ proc `[]`*(v: Value, typ: typedesc): any =
 
   # TODO: object, sequence.
 
-proc `[]`*(v: ValueRef, typ: typedesc): any =
+proc `[]`*(v: ValueRef, typ: typedesc): auto =
   v[][typ]
 
 #################
