@@ -25,11 +25,11 @@ import hashes
 # Errors. #
 ###########
 
-type ConversionError* = object of Exception
+type ConversionDefect* = object of Defect
   discard
 
-proc newConversionError(msg: string): ref ConversionError =
-  newException(ConversionError, msg)
+proc newConversionDefect(msg: string): ref ConversionDefect =
+  newException(ConversionDefect, msg)
 
 ##########
 # Values #
@@ -773,7 +773,7 @@ proc asBool*(v: Value): bool =
   elif v.kind == valChar:
     return parseBool("" & v.charVal)
   else:
-    raise newConversionError("Can't convert $1 to bool.".format(v.kind))
+    raise newConversionDefect("Can't convert $1 to bool.".format(v.kind))
 
 proc asBool*(v: ValueRef): bool =
   v[].asBool()
@@ -792,7 +792,7 @@ proc asChar*(v: Value): char =
   elif v.kind == valString:
     return strToChar(v.strVal)
   else:
-    raise newConversionError("Can't convert $1 to char.".format(v.kind))
+    raise newConversionDefect("Can't convert $1 to char.".format(v.kind))
 
 proc asChar*(v: ValueRef): char =
   v[].asChar()
@@ -816,7 +816,7 @@ proc asBiggestInt*(v: Value): BiggestInt =
   elif v.kind == valString:
     return parseBiggestInt(v.strVal)
   else:
-    raise newConversionError("Can't convert $1 to int.".format(v.kind))
+    raise newConversionDefect("Can't convert $1 to int.".format(v.kind))
 
 proc asBiggestInt*(v: ValueRef): BiggestInt =
   v[].asBiggestInt()
@@ -923,7 +923,7 @@ proc asBiggestFloat*(v: Value): BiggestFloat =
   elif v.kind == valString:
     return parseFloat(v.strVal)
   else:
-    raise newConversionError("Can't convert $1 to float.".format(v.kind))
+    raise newConversionDefect("Can't convert $1 to float.".format(v.kind))
 
 proc asBiggestFloat*(v: ValueRef): BiggestFloat =
   v[].asBiggestFloat()
@@ -1157,7 +1157,7 @@ proc fromJson*(jsonContent: string): ValueRef =
 
 proc strToChar(str: string): char =
   if str == nil:
-    raise newConversionError("Can't convert nil string.")
+    raise newConversionDefect("Can't convert nil string.")
 
   case str.len():
   of 0:
@@ -1165,12 +1165,12 @@ proc strToChar(str: string): char =
   of 1:
     result = str[0]
   else:
-    raise newConversionError("Can't convert str '$1' to char: must have length 1".format(str))
+    raise newConversionDefect("Can't convert str '$1' to char: must have length 1".format(str))
 
 
 proc convertString*[T](str: string): T =
   if str == nil:
-    raise newConversionError("Can't convert nil string.")
+    raise newConversionDefect("Can't convert nil string.")
 
   var haveResult = false
 
@@ -1224,7 +1224,7 @@ proc convertString*[T](str: string): T =
     haveResult = true
 
   if not haveResult:
-    raise newConversionError("Can't convert string '$1' to $2.".format(str, name(T)))
+    raise newConversionDefect("Can't convert string '$1' to $2.".format(str, name(T)))
 
 
 
