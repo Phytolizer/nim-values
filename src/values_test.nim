@@ -14,7 +14,6 @@ from std/json import nil
 
 import unittest
 
-{.experimental: "dotOperators".}
 import values
 
 macro testType(): untyped =
