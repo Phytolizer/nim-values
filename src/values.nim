@@ -413,9 +413,7 @@ proc add*[T](v: ValueRef, x: T) =
   v.seqVal.add(toValueRef(x))
 
 proc newValueSeq*(items: varargs[ValueRef, toValueRef]): ValueRef =
-  new(result)
-  result.kind = valSeq
-  result.seqVal = @[]
+  result = ValueRef(kind: valSeq)
   for item in items:
     result.add(item)
 
@@ -1081,16 +1079,13 @@ proc toValueRef*(n: json.JsonNode): ValueRef =
   of json.JBool:
     return toValueRef(n.bval)
   of json.JNull:
-    new(result)
-    result.kind = valNil 
+    result = ValueRef(kind: valNil)
   of json.JObject:
     result = newValueMap()
     for item in json.pairs(n):
       result[item.key] = toValueRef(item.val)
   of json.JArray:
-    new(result)
-    result.kind = valSeq
-    result.seqVal = @[]
+    result = ValueRef(kind: valSeq)
     for item in n.elems:
       result.seqVal.add(toValueRef(item))
 

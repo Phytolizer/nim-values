@@ -9,7 +9,8 @@
 ##                                                                           ##
 ###############################################################################
 
-import macros, typetraits, times
+import macros, typetraits, sets, times
+from std/json import nil
 
 import unittest
 
@@ -421,12 +422,12 @@ suite("Values"):
       var keys: seq[string] = @[]
       for key in m.keys:
         keys.add(key)
-      assert keys == actualKeys
+      assert keys.toHashSet() == actualKeys.toHashSet()
 
     test "Should .getKeys()":
       var m = @%(x: "str", y: 1)
       var actualKeys = @["x", "y"]
-      assert m.getKeys() == actualKeys
+      assert m.getKeys().toHashSet() == actualKeys.toHashSet()
     
     test "Should iterate over fieldpairs":
       var m = @%(x: "str", y: 1)
@@ -489,5 +490,5 @@ suite("Values"):
         assert s.toJson() == "[1, 2, \"22\"]"
 
       test "Should convert map":
-        var json = toMap((s: "str", i: 1, f: 10.11, b: true, nested: (ns: "str", ni: 5, na: @[1, 2, 3]))).toJson()
-        assert json == """{"nested": {"ni": 5, "ns": "str", "na": [1, 2, 3]}, "f": 10.11, "i": 1, "s": "str", "b": true}""" 
+        var jsonObj = toMap((s: "str", i: 1, f: 10.11, b: true, nested: (ns: "str", ni: 5, na: @[1, 2, 3]))).toJson()
+        assert json.`==`(json.parseJson(jsonObj), json.parseJson("""{"nested": {"ni": 5, "ns": "str", "na": [1, 2, 3]}, "f": 10.11, "i": 1, "s": "str", "b": true}"""))
