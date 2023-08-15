@@ -356,7 +356,6 @@ suite("Values"):
     test "Should build with ValueSeq()":
       var s = ValueSeq(1, "a", false)
       assert s.isSeq()
-      echo(repr(s))
       assert s[0][int] == 1
       assert s[1][string] == "a"
       assert s[2][bool] == false
