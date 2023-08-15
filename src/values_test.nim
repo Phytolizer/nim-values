@@ -9,19 +9,14 @@
 ##                                                                           ##
 ###############################################################################
 
-import macros, typetraits
+import macros, typetraits, times
 
-import omega, alpha
+import unittest
 
-include values
+{.experimental: "dotOperators".}
+import values
 
-type TestTyp = ref object of RootObj
-  strField: string
-  intField: int
-  floatField: float
-  boolField: bool
-
-macro testType(): stmt =
+macro testType(): untyped =
   result = quote do:
     type TestTyp = ref object of RootObj
       strField: string
@@ -29,473 +24,470 @@ macro testType(): stmt =
       floatField: float
       boolField: bool
 
-  var acs = buildAccessors(result[0][0])
-  acs.copyChildrenTo(result)
-  echo(repr(result))
+  var acs = buildAccessors(result[0])
+  result = newStmtList(result)
+  result.add acs
 
 testType()
 
-Suite("Values"):
+suite("Values"):
 
-  Describe "Value":
+  test "Value":
 
-    Describe "toValue(Ref)(), type checkers and accessors":
-      It "Should work for bool":
-        toValue(true).isBool().should beTrue()
-        toValue(true).getBool().should beTrue()
-        toValue(true).asBool().should beTrue()
-        toValue(true)[bool].should beTrue()
+    test "toValue(Ref)(), type checkers and accessors":
+      test "Should work for bool":
+        assert toValue(true).isBool()
+        assert toValue(true).getBool()
+        assert toValue(true).asBool()
+        assert toValue(true)[bool]
 
-        toValueRef(true).isBool().should beTrue()
-        toValueRef(true).getBool().should beTrue()
-        toValueRef(true).asBool().should beTrue()
-        toValueRef(true)[bool].should beTrue()
+        assert toValueRef(true).isBool()
+        assert toValueRef(true).getBool()
+        assert toValueRef(true).asBool()
+        assert toValueRef(true)[bool]
 
-      It "Should work for char":
-        toValue('c').isChar().should beTrue()
-        toValue('c').getChar().should equal 'c'
-        toValue('c').asChar().should equal 'c'
-        toValue('c')[char].should equal 'c'
+      test "Should work for char":
+        assert toValue('c').isChar()
+        assert toValue('c').getChar() == 'c'
+        assert toValue('c').asChar() == 'c'
+        assert toValue('c')[char] == 'c'
 
-        toValueRef('c').isChar().should beTrue()
-        toValueRef('c').getChar().should equal 'c'
-        toValueRef('c').asChar().should equal 'c'
-        toValueRef('c')[char].should equal 'c'
+        assert toValueRef('c').isChar()
+        assert toValueRef('c').getChar() == 'c'
+        assert toValueRef('c').asChar() == 'c'
+        assert toValueRef('c')[char] == 'c'
 
-      It "Should work for int":
-        toValue(33'i8).isInt().should beTrue()
-        toValue(33'i16).isInt().should beTrue()
-        toValue(33'i32).isInt().should beTrue()
-        toValue(33'i64).isInt().should beTrue()
-        toValue(33).isInt().should beTrue()
+      test "Should work for int":
+        assert toValue(33'i8).isInt()
+        assert toValue(33'i16).isInt()
+        assert toValue(33'i32).isInt()
+        assert toValue(33'i64).isInt()
+        assert toValue(33).isInt()
 
-        toValue(33).getInt().should equal 33
-        toValue(33).asInt().should equal 33
-        toValue(33)[int8].should equal 33'i8
-        toValue(33)[int16].should equal 33'i16
-        toValue(33)[int32].should equal 33'i32
-        toValue(33)[int64].should equal 33'i64
-        toValue(33)[int].should equal 33
+        assert toValue(33).getInt() == 33
+        assert toValue(33).asInt() == 33
+        assert toValue(33)[int8] == 33'i8
+        assert toValue(33)[int16] == 33'i16
+        assert toValue(33)[int32] == 33'i32
+        assert toValue(33)[int64] == 33'i64
+        assert toValue(33)[int] == 33
 
-        toValueRef(33).isInt().should beTrue()
-        toValueRef(33).getInt().should equal 33
-        toValueRef(33).asInt().should equal 33
-        toValueRef(33)[int].should equal 33
+        assert toValueRef(33).isInt()
+        assert toValueRef(33).getInt() == 33
+        assert toValueRef(33).asInt() == 33
+        assert toValueRef(33)[int] == 33
 
-      It "Should work for uint":
-        toValue(33'u8).isUInt().should beTrue()
-        toValue(33'u16).isUInt().should beTrue()
-        toValue(33'u32).isUInt().should beTrue()
-        toValue(33'u64).isUInt().should beTrue()
-        toValue(33'u).isUInt().should beTrue()
+      test "Should work for uint":
+        assert toValue(33'u8).isUInt()
+        assert toValue(33'u16).isUInt()
+        assert toValue(33'u32).isUInt()
+        assert toValue(33'u64).isUInt()
+        assert toValue(33'u).isUInt()
 
-        toValue(33'u).getUInt().should equal 33'u
-        toValue(33'u).asUInt().should equal 33'u
-        toValue(33'u)[uint8].should equal 33'u8
-        toValue(33'u)[uint16].should equal 33'u16
-        toValue(33'u)[uint32].should equal 33'u32
-        toValue(33'u)[uint64].should equal 33'u64
-        toValue(33'u)[uint].should equal 33'u
+        assert toValue(33'u).getUInt() == 33'u
+        assert toValue(33'u).asUInt() == 33'u
+        assert toValue(33'u)[uint8] == 33'u8
+        assert toValue(33'u)[uint16] == 33'u16
+        assert toValue(33'u)[uint32] == 33'u32
+        assert toValue(33'u)[uint64] == 33'u64
+        assert toValue(33'u)[uint] == 33'u
 
-        toValueRef(33'u).isUInt().should beTrue()
-        toValueRef(33'u).getUInt().should equal 33'u
-        toValueRef(33'u).asUInt().should equal 33'u
-        toValueRef(33'u)[uint].should equal 33'u
+        assert toValueRef(33'u).isUInt()
+        assert toValueRef(33'u).getUInt() == 33'u
+        assert toValueRef(33'u).asUInt() == 33'u
+        assert toValueRef(33'u)[uint] == 33'u
 
-      It "Should work for float":
-        toValue(33.33).isFloat().should beTrue()
-        toValue(33'f32).isFloat().should beTrue()
-        toValue(33'f64).isFloat().should beTrue()
+      test "Should work for float":
+        assert toValue(33.33).isFloat()
+        assert toValue(33'f32).isFloat()
+        assert toValue(33'f64).isFloat()
 
-        toValue(33.33).getFloat().should equal 33.33
-        toValue(33.33).asFloat().should equal 33.33
-        toValue(33.33)[float32].should equal 33.33'f32
-        toValue(33.33)[float64].should equal 33.33'f64
-        toValue(33.33)[float].should equal 33.33
+        assert toValue(33.33).getFloat() == 33.33
+        assert toValue(33.33).asFloat() == 33.33
+        assert toValue(33.33)[float32] == 33.33'f32
+        assert toValue(33.33)[float64] == 33.33'f64
+        assert toValue(33.33)[float] == 33.33
 
-        toValueRef(33.33).isFloat().should beTrue()
-        toValueRef(33.33).getFloat().should equal 33.33
-        toValueRef(33.33).asFloat().should equal 33.33
-        toValueRef(33.33)[float].should equal 33.33
+        assert toValueRef(33.33).isFloat()
+        assert toValueRef(33.33).getFloat() == 33.33
+        assert toValueRef(33.33).asFloat() == 33.33
+        assert toValueRef(33.33)[float] == 33.33
 
-      It "Should work for string":
-        toValue("string").isString().should beTrue()
-        toValue("string").getString().should equal "string"
-        toValue("string").asString().should equal "string"
-        toValue("string")[string].should equal "string"
+      test "Should work for string":
+        assert toValue("string").isString()
+        assert toValue("string").getString() == "string"
+        assert toValue("string").asString() == "string"
+        assert toValue("string")[string] == "string"
 
-        toValueRef("string").isString().should beTrue()
-        toValueRef("string").getString().should equal "string"
-        toValueRef("string").asString().should equal "string"
-        toValueRef("string")[string].should equal "string"
+        assert toValueRef("string").isString()
+        assert toValueRef("string").getString() == "string"
+        assert toValueRef("string").asString() == "string"
+        assert toValueRef("string")[string] == "string"
 
-      It "Should work for time":
+      test "Should work for time":
         var t = times.getTime()
-        var ti = times.getLocalTime(t)
-        toValue(t).isTime().should beTrue()
-        toValue(t).getTime().should equal ti
-        toValue(t)[times.TimeInfo].should equal ti
-        toValue(t)[times.Time].should equal t
+        var ti = times.local(t)
+        assert toValue(t).isTime()
+        assert toValue(t).getTime() == ti
+        assert toValue(t)[times.DateTime] == ti
+        assert toValue(t)[times.Time] == t
 
-        toValueRef(t).isTime().should beTrue()
-        toValueRef(t).getTime().should equal ti
-        toValueRef(t)[Time].should equal t
+        assert toValueRef(t).isTime()
+        assert toValueRef(t).getTime() == ti
+        assert toValueRef(t)[Time] == t
 
-      It "Should work for sequence":
+      test "Should work for sequence":
         var s = @[1, 2, 3]
         var vs = @[toValueRef(1), toValueRef(2), toValueRef(3)]
-        toValue(s).isSeq().should beTrue()
-        toValue(s).getSeq().should equal vs
-        toValue(s).asSeq(int).should equal s
+        assert toValue(s).isSeq()
+        assert toValue(s).getSeq() == vs
+        assert toValue(s).asSeq(int) == s
 
-        toValueRef(s).isSeq().should beTrue()
-        toValueRef(s).getSeq().should equal vs
-        toValueRef(s).asSeq(int).should equal s
+        assert toValueRef(s).isSeq()
+        assert toValueRef(s).getSeq() == vs
+        assert toValueRef(s).asSeq(int) == s
 
-      It "Should work for array":
+      test "Should work for array":
         var a = [1, 2, 3]
         var vs = @[toValueRef(1), toValueRef(2), toValueRef(3)]
-        toValue(a).isSeq().should beTrue()
-        toValue(a).getSeq().should equal vs
+        assert toValue(a).isSeq()
+        assert toValue(a).getSeq() == vs
 
-        toValueRef(a).isSeq().should beTrue()
-        toValueRef(a).getSeq().should equal vs
+        assert toValueRef(a).isSeq()
+        assert toValueRef(a).getSeq() == vs
 
-      It "Should work for set":
+      test "Should work for set":
         var a = {1, 2, 3}
         var vs = @[toValueRef(1), toValueRef(2), toValueRef(3)]
-        toValue(a).isSet().should beTrue()
-        toValue(a).getSeq().should equal vs
+        assert toValue(a).isSet()
+        assert toValue(a).getSeq() == vs
 
-        toValueRef(a).isSet().should beTrue()
-        toValueRef(a).getSeq().should equal vs
+        assert toValueRef(a).isSet()
+        assert toValueRef(a).getSeq() == vs
 
-      It "Should work for map":
+      test "Should work for map":
         var t = (s: "s", i: 1, f: 1.1)
         var m = toValueRef(t)
-        m.isMap().should beTrue()
-        m.s.should equal "s"
-        m.i.should equal 1
-        m.f.should equal 1.1
+        assert m.isMap()
+        assert m.s == "s"
+        assert m.i == 1
+        assert m.f == 1.1
 
-    Describe "isZero()":
-      It "Should work for int":
-        toValue(0).isZero().should beTrue()
-        toValue(1).isZero().should beFalse()
+    test "isZero()":
+      test "Should work for int":
+        assert toValue(0).isZero()
+        assert not toValue(1).isZero()
 
-        toValueRef(0).isZero().should beTrue()
-        toValueRef(1).isZero().should beFalse()
+        assert toValueRef(0).isZero()
+        assert not toValueRef(1).isZero()
 
-      It "Should work for uint":
-        toValue(0'u).isZero().should beTrue()
-        toValue(1'u).isZero().should beFalse()
+      test "Should work for uint":
+        assert toValue(0'u).isZero()
+        assert not toValue(1'u).isZero()
 
-        toValueRef(0'u).isZero().should beTrue()
-        toValueRef(1'u).isZero().should beFalse()
+        assert toValueRef(0'u).isZero()
+        assert not toValueRef(1'u).isZero()
 
-      It "Should work for float":
-        toValue(0.0).isZero().should beTrue()
-        toValue(1.1).isZero().should beFalse()
+      test "Should work for float":
+        assert toValue(0.0).isZero()
+        assert not toValue(1.1).isZero()
 
-        toValueRef(0.0).isZero().should beTrue()
-        toValueRef(1.1).isZero().should beFalse()
+        assert toValueRef(0.0).isZero()
+        assert not toValueRef(1.1).isZero()
 
-      It "Should work for string":
+      test "Should work for string":
         var s: string
-        toValue(s).isZero().should beTrue()
-        toValue("").isZero().should beTrue()
-        toValue("a").isZero().should beFalse()
+        assert toValue(s).isZero()
+        assert toValue("").isZero()
+        assert not toValue("a").isZero()
 
-        toValueRef(s).isZero().should beTrue()
-        toValueRef("").isZero().should beTrue()
-        toValueRef("a").isZero().should beFalse()
+        assert toValueRef(s).isZero()
+        assert toValueRef("").isZero()
+        assert not toValueRef("a").isZero()
 
-    Describe ".len()":
-      It "Should work for char":
-        toValue(' ').len().should equal 1
-        toValueRef(' ').len().should equal 1
+    test ".len()":
+      test "Should work for char":
+        assert toValue(' ').len() == 1
+        assert toValueRef(' ').len() == 1
 
-      It "Should work for string":
-        toValue("abc").len().should equal 3
-        toValueRef("abc").len().should equal 3
+      test "Should work for string":
+        assert toValue("abc").len() == 3
+        assert toValueRef("abc").len() == 3
 
-      It "Should work for seq":
-        toValue(@[1, 2, 3]).len().should equal 3
-        toValueRef(@[1, 2, 3]).len().should equal 3
+      test "Should work for seq":
+        assert toValue(@[1, 2, 3]).len() == 3
+        assert toValueRef(@[1, 2, 3]).len() == 3
 
-      It "Should work for set":
-        toValue({1, 2, 3}).len().should equal 3
-        toValueRef({1, 2, 3}).len().should equal 3
+      test "Should work for set":
+        assert toValue({1, 2, 3}).len() == 3
+        assert toValueRef({1, 2, 3}).len() == 3
 
-      It "Should work for map":
-        toValueRef((a: 1)).len().should equal 1
+      test "Should work for map":
+        assert toValueRef((a: 1)).len() == 1
 
-    Describe "`==`":
-      It "Should work for bool":
-        (toValue(true) == toValue(true)).should beTrue()
-        (toValue(true) == true).should beTrue()
+    test "`==`":
+      test "Should work for bool":
+        assert toValue(true) == toValue(true)
+        assert toValue(true) == true
 
-        (toValueRef(false) == toValueRef(false)).should beTrue()
-        (toValueRef(true) == toValue(true)).should beTrue()
-        (toValue(true) == toValueRef(true)).should beTrue()
-        (toValueRef(false) == false).should beTrue()
+        assert toValueRef(false) == toValueRef(false)
+        assert toValueRef(true) == toValue(true)
+        assert toValue(true) == toValueRef(true)
+        assert toValueRef(false) == false
 
-      It "Should work for char":
-        (toValue(' ') == toValue(' ')).should beTrue()
-        (toValue(' ') == ' ').should beTrue()
+      test "Should work for char":
+        assert toValue(' ') == toValue(' ')
+        assert toValue(' ') == ' '
 
-        (toValueRef(' ') == toValueRef(' ')).should beTrue()
-        (toValueRef(' ') == toValue(' ')).should beTrue()
-        (toValue(' ') == toValueRef(' ')).should beTrue()
-        (toValueRef(' ') == ' ').should beTrue()
+        assert toValueRef(' ') == toValueRef(' ')
+        assert toValueRef(' ') == toValue(' ')
+        assert toValue(' ') == toValueRef(' ')
+        assert toValueRef(' ') == ' '
 
-      It "Should work for string":
-        (toValue("a b c") == toValue("a b c")).should beTrue()
-        (toValue("a b c") == "a b c").should beTrue()
+      test "Should work for string":
+        assert toValue("a b c") == toValue("a b c")
+        assert toValue("a b c") == "a b c"
 
-        (toValueRef("a b c") == toValueRef("a b c")).should beTrue()
-        (toValueRef("a b c") == toValue("a b c")).should beTrue()
-        (toValue("a b c") == toValueRef("a b c")).should beTrue()
-        (toValueRef("a b c") == "a b c").should beTrue()
+        assert toValueRef("a b c") == toValueRef("a b c")
+        assert toValueRef("a b c") == toValue("a b c")
+        assert toValue("a b c") == toValueRef("a b c")
+        assert toValueRef("a b c") == "a b c"
 
-      It "Should work for int":
-        (toValue(5) == toValue(5)).should beTrue()
-        (toValue(5) == 5).should beTrue()
+      test "Should work for int":
+        assert toValue(5) == toValue(5)
+        assert toValue(5) == 5
 
-        (toValueRef(5) == toValueRef(5)).should beTrue()
-        (toValueRef(5) == toValue(5)).should beTrue()
-        (toValue(5) == toValueRef(5)).should beTrue()
-        (toValueRef(5) == 5).should beTrue()
+        assert toValueRef(5) == toValueRef(5)
+        assert toValueRef(5) == toValue(5)
+        assert toValue(5) == toValueRef(5)
+        assert toValueRef(5) == 5
 
 
-      It "Should work for uint":
-        (toValue(5'u) == toValue(5'u)).should beTrue()
-        (toValue(5'u) == 5'u).should beTrue()
+      test "Should work for uint":
+        assert toValue(5'u) == toValue(5'u)
+        assert toValue(5'u) == 5'u
 
-        (toValueRef(5'u) == toValueRef(5'u)).should beTrue()
-        (toValueRef(5'u) == toValue(5'u)).should beTrue()
-        (toValue(5'u) == toValueRef(5'u)).should beTrue()
-        (toValueRef(5'u) == 5'u).should beTrue()
+        assert toValueRef(5'u) == toValueRef(5'u)
+        assert toValueRef(5'u) == toValue(5'u)
+        assert toValue(5'u) == toValueRef(5'u)
+        assert toValueRef(5'u) == 5'u
 
-      It "Should work for float":
-        (toValue(5.5) == toValue(5.5)).should beTrue()
-        (toValue(5.5) == 5.5).should beTrue()
+      test "Should work for float":
+        assert toValue(5.5) == toValue(5.5)
+        assert toValue(5.5) == 5.5
 
-        (toValueRef(5.5) == toValueRef(5.5)).should beTrue()
-        (toValueRef(5.5) == toValue(5.5)).should beTrue()
-        (toValue(5.5) == toValueRef(5.5)).should beTrue()
-        (toValueRef(5.5) == 5.5).should beTrue()
+        assert toValueRef(5.5) == toValueRef(5.5)
+        assert toValueRef(5.5) == toValue(5.5)
+        assert toValue(5.5) == toValueRef(5.5)
+        assert toValueRef(5.5) == 5.5
 
-      It "Should work for sequence":
+      test "Should work for sequence":
         var s = ValueSeq(1, 2, 3)
-        (s == ValueSeq(1, 2, 3)).should beTrue()
-        (s == @[1, 2, 3]).should beTrue()
-        (s == [1, 2, 3]).should beTrue()
+        assert s == ValueSeq(1, 2, 3)
+        assert s == @[1, 2, 3]
+        assert s == [1, 2, 3]
 
-        (toValueRef(5.5) == toValueRef(5.5)).should beTrue()
-        (toValueRef(5.5) == toValue(5.5)).should beTrue()
-        (toValue(5.5) == toValueRef(5.5)).should beTrue()
-        (toValueRef(5.5) == 5.5).should beTrue()
+        assert toValueRef(5.5) == toValueRef(5.5)
+        assert toValueRef(5.5) == toValue(5.5)
+        assert toValue(5.5) == toValueRef(5.5)
+        assert toValueRef(5.5) == 5.5
 
-      It "Should work for map":
+      test "Should work for map":
         var s = @%(s: "s", i: 1, f: 1.1, b: true)
-        (s == @%(s: "s", i: 1, f: 1.1, b: true)).should beTrue()
-        (s == @%(s: "lala")).should beFalse()
+        assert s == @%(s: "s", i: 1, f: 1.1, b: true)
+        assert not (s == @%(s: "lala"))
 
-  Describe "Sequence Value":
+  test "Sequence Value":
 
-    It "Should iterate in pairs":
+    test "Should iterate in pairs":
       var s = @[1, 2, 3]
       for i, x in toValue(s):
-        x.should equal toValue(s[i])
+        assert x == toValue(s[i])
       for i, x in toValueRef(s):
-        x.should equal toValue(s[i])
+        assert x == toValue(s[i])
 
 
-    It "Should iterate items":
+    test "Should iterate items":
       var s = @[1, 2, 3]
       var i = 0
       for x in toValue(s):
-        x.should equal toValue(s[i])
+        assert x == toValue(s[i])
         i.inc()
       i = 0
       for x in toValueRef(s):
-        x.should equal toValue(s[i])
+        assert x == toValue(s[i])
         i.inc()
 
-    It "Should get/set with [], []=":
+    test "Should get/set with [], []=":
       var s = toValue([1, 2, 3])
-      s[0][int].should equal 1
+      assert s[0][int] == 1
       s[0] = toValue(10)
-      s[0][int].should equal 10
+      assert s[0][int] == 10
       s[0] = 15
-      s[0][int].should equal 15
+      assert s[0][int] == 15
 
       var r = toValueRef([1, 2, 3])
-      r[0][int].should equal 1
+      assert r[0][int] == 1
       r[0] = toValue(10)
-      r[0][int].should equal 10
+      assert r[0][int] == 10
       r[0] = 15
-      r[0][int].should equal 15
+      assert r[0][int] == 15
 
-    It "Should .add()":
+    test "Should .add()":
       var s = toValue([0, 1, 2])
       s.add(toValue(3))
-      s[3][int].should equal 3
+      assert s[3][int] == 3
       s.add(4)
-      s[4][int].should equal 4
+      assert s[4][int] == 4
 
       var r = toValueRef([0, 1, 2])
       r.add(toValue(3))
-      r[3][int].should equal 3
+      assert r[3][int] == 3
       r.add(4)
-      r[4][int].should equal 4
+      assert r[4][int] == 4
 
-    It "Should build with newValueSeq()":
+    test "Should build with newValueSeq()":
       var s = newValueSeq(1, "a", false)
-      s[0][int].should equal 1
-      s[1][string].should equal "a"
-      s[2][bool].should equal false
+      assert s[0][int] == 1
+      assert s[1][string] == "a"
+      assert s[2][bool] == false
 
-    It "Should build with ValueSeq()":
+    test "Should build with ValueSeq()":
       var s = ValueSeq(1, "a", false)
-      s.isSeq().should beTrue()
+      assert s.isSeq()
       echo(repr(s))
-      s[0][int].should equal 1
-      s[1][string].should equal "a"
-      s[2][bool].should equal false
+      assert s[0][int] == 1
+      assert s[1][string] == "a"
+      assert s[2][bool] == false
 
 
-  Describe("ValueMap"):
+  test("ValueMap"):
 
-    It("Should set / get with `[]`"):
+    test("Should set / get with `[]`"):
       var m = newValueMap()
       m["x"] = toValue(22)
       m["y"] = 33
-      m["x"][int].should equal 22
-      m["y"][int].should equal 33
+      assert m["x"][int] == 22
+      assert m["y"][int] == 33
 
-    It("Should set / get Value with `.`"):
+    test("Should set / get Value with `.`"):
       var m = newValueMap()
       m.x = toValue(22)
       m.y = 33
-      m.x[int].should equal 22
-      m.y[int].should equal 33
+      assert m.x[int] == 22
+      assert m.y[int] == 33
 
-    It("Should set / get with nested `.`"):
+    test("Should set / get with nested `.`"):
       var m = newValueMap()
       m.nested = newValueMap()
 
       m.nested.val = toValue(1)
-      m.nested.val[int].should equal 1
+      assert m.nested.val[int] == 1
 
       m.nested.key = "lala"
-      m.nested.key[string].should equal "lala"
+      assert m.nested.key[string] == "lala"
 
-    It("Should set/get with nested `[]`"):
+    test("Should set/get with nested `[]`"):
       var m = newValueMap()
       m["nested"] = newValueMap()
 
       m["nested"]["key"] = toValue(1)
-      m["nested"]["key"][int].should equal 1
+      assert m["nested"]["key"][int] == 1
 
       m["nested"]["key"] = "lala"
-      m["nested"]["key"][string].should equal "lala"
+      assert m["nested"]["key"][string] == "lala"
 
-    It "Should auto-create nested maps":
+    test "Should auto-create nested maps":
       var m = newValueMap(autoNesting = true)
       m.nested.x.x = 1
-      m.nested.x.x[int].should equal 1
+      assert m.nested.x.x[int] == 1
 
       m.nested.x.y = "lala"
-      m.nested.x.y[string].should equal "lala"
+      assert m.nested.x.y[string] == "lala"
 
-    It "Should create ValueMap from tuple with @%()":
+    test "Should create ValueMap from tuple with @%()":
       var m = @%(x: "str", i: 55)
-      m.x.should equal "str"
-      m.i.should equal 55
+      assert m.x == "str"
+      assert m.i == 55
 
-    It "Should .hasKey()":
+    test "Should .hasKey()":
       var m = @%(x: "str")
-      m.hasKey("x").should beTrue()
-      m.hasKey("y").should beFalse()
+      assert m.hasKey("x")
+      assert not m.hasKey("y")
 
-    It "Should .keys()":
+    test "Should .keys()":
       var m = @%(x: "str", y: 1)
       var actualKeys = @["x", "y"]
       var keys: seq[string] = @[]
       for key in m.keys:
         keys.add(key)
-      keys.should equal actualKeys
+      assert keys == actualKeys
 
-    It "Should .getKeys()":
+    test "Should .getKeys()":
       var m = @%(x: "str", y: 1)
       var actualKeys = @["x", "y"]
-      m.getKeys().should equal actualKeys
+      assert m.getKeys() == actualKeys
     
-    It "Should iterate over fieldpairs":
+    test "Should iterate over fieldpairs":
       var m = @%(x: "str", y: 1)
       for key, val in m.fieldPairs:
-        val.should equal m[key]
+        assert val == m[key]
 
-  Describe "JSON handling":
+  test "JSON handling":
 
-    It "Should parse json from string":
+    test "Should parse json from string":
       var js = """{"str": "string", "intVal": 55, "floatVal": 1.115, "boolVal": true, "nested": {"nestedStr": "str", "arr": [1, 3, "str"]}}"""
       var map = fromJson(js)
-      map.kind.should be valMap
+      assert map.kind == valMap
 
-      map.str.should be "string"
+      assert map.str == "string"
 
-      map["intVal"].should be 55
+      assert map["intVal"] == 55
 
-      map["floatVal"].should be 1.115
+      assert map["floatVal"] == 1.115
 
-      map["boolVal"].should beTrue()
+      assert map["boolVal"] == true
 
       var nestedMap = map.nested
-      nestedMap.kind.should be valMap
+      assert nestedMap.kind == valMap
 
-      nestedMap.nestedStr.should be "str"
+      assert nestedMap.nestedStr == "str"
 
-      nestedMap.arr.isSeq.should beTrue()
+      assert nestedMap.arr.isSeq
 
       var arr = nestedMap.arr
-      arr.isSeq().should beTrue()
-      arr.len().should be 3
-      arr[0].should be 1
-      arr[1].should be 3
-      arr[2].should be "str"
+      assert arr.isSeq()
+      assert arr.len() == 3
+      assert arr[0] == 1
+      assert arr[1] == 3
+      assert arr[2] == "str"
 
-    Describe "toJson":
+    test "toJson":
 
-      It "Should convert bool":
-        toValue(true).toJson().should equal "true"
-        toValue(false).toJson().should equal "false"
+      test "Should convert bool":
+        assert toValue(true).toJson() == "true"
+        assert toValue(false).toJson() == "false"
 
-      It "Should convert char":
-        toValue('x').toJson().should equal "\"x\""
+      test "Should convert char":
+        assert toValue('x').toJson() == "\"x\""
 
-      It "Should convert int":
-        toValue(22).toJson().should equal "22"
+      test "Should convert int":
+        assert toValue(22).toJson() == "22"
 
-      It "Should convert uint":
-        toValue(22).toJson().should equal "22"
+      test "Should convert uint":
+        assert toValue(22).toJson() == "22"
 
-      It "Should convert float":
-        toValue(22.22).toJson().should equal "22.22"
+      test "Should convert float":
+        assert toValue(22.22).toJson() == "22.22"
 
-      It "Should convert string":
-        toValue("test").toJson().should equal "\"test\""
+      test "Should convert string":
+        assert toValue("test").toJson() == "\"test\""
 
-      It "Should convert sequence":
+      test "Should convert sequence":
         var s = toValue(@[1, 2])
         s.add("22")
-        s.toJson().should equal "[1, 2, \"22\"]"
+        assert s.toJson() == "[1, 2, \"22\"]"
 
-      It "Should convert map":
+      test "Should convert map":
         var json = toMap((s: "str", i: 1, f: 10.11, b: true, nested: (ns: "str", ni: 5, na: @[1, 2, 3]))).toJson()
-        json.should equal """{"nested": {"ni": 5, "ns": "str", "na": [1, 2, 3]}, "f": 10.11, "i": 1, "s": "str", "b": true}""" 
-
-when isMainModule:
-  omega.run()
+        assert json == """{"nested": {"ni": 5, "ns": "str", "na": [1, 2, 3]}, "f": 10.11, "i": 1, "s": "str", "b": true}""" 

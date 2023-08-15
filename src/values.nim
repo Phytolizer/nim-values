@@ -14,6 +14,7 @@ include "system/inclrtl.nim"
 include "system/hti.nim"
 
 import typeinfo, typetraits, macros
+import std/[genasts, strformat]
 import tables
 from json import nil
 from strutils import parseBiggestInt, parseFloat, parseBool, parseInt, splitLines, format
@@ -109,7 +110,7 @@ type
 
 proc `$`*(v: Value): string
 proc `$`*(v: ValueRef): string
-proc `==`*(a: ValueRef, b: ValueRef): bool
+func `==`*(a: ValueRef, b: ValueRef): bool
 
 ##################
 # Type checkers. #
@@ -316,7 +317,7 @@ proc toValue*[T](val: T): Value =
     result = Value(kind: valString, `strVal`: strVal)
 
   when val is times.Time:
-    result = Value(kind: valTime, timeVal: times.getLocalTime(val))
+    result = Value(kind: valTime, timeVal: times.local(val))
   when val is times.DateTime:
     result = Value(kind: valTime, timeVal: val)
 
@@ -336,7 +337,7 @@ proc toValue*[T](val: T): Value =
   # Values, valuemaps.
   when val is Value:
     result = Value(kind: val.kind)
-    deepCopy(result, val)
+    result = val
 
   when val is ValueRef:
     result = val[]
@@ -418,7 +419,7 @@ proc newValueSeq*(items: varargs[ValueRef, toValueRef]): ValueRef =
   for item in items:
     result.add(item)
 
-proc ValueSeq(items: varargs[ValueRef, toValueRef]): ValueRef =
+proc ValueSeq*(items: varargs[ValueRef, toValueRef]): ValueRef =
   newValueSeq(items)
 
 ########
@@ -451,10 +452,11 @@ proc getKeys*(v: ValueRef): seq[string] =
 
 iterator fieldPairs*(v: Value): tuple[key: string, val: ValueRef] =
   if v.kind != valMap:
-    raise newException(ValueError, "fieldPairs can only be used for map values, got " & v.kind.`$`)
-
-  for key, x in v.map:
-    yield (key, x)
+    discard
+    # raise newException(ValueError, "fieldPairs can only be used for map values, got " & v.kind.`$`)
+  else:
+    for key, x in v.map:
+      yield (key, x)
 
 iterator fieldPairs*(v: ValueRef): tuple[key: string, val: ValueRef] =
   for key, x in v[].fieldPairs:
@@ -473,11 +475,13 @@ proc `[]`*(v: ValueRef, key: string): ValueRef =
   v.map[key]
 
 
-proc `.=`*[T](v: ValueRef, key: auto, val: T) =
-  v[string(key)] = val
+macro `.=`*[T](v: ValueRef, key: untyped, val: T) =
+  genAst(v, key = key.strVal, val):
+    v[key] = val
 
-proc `.`*(v: ValueRef, key: auto): ValueRef =
-  return v[string(key)]
+macro `.`*(v: ValueRef, key: untyped): ValueRef =
+  genAst(v, key = key.strVal):
+    v[key]
 
 proc toMap*(t: tuple): ValueRef =
   # Convenient constructor for maps based on a tuple.
@@ -543,7 +547,7 @@ proc `==`*(a: Value, b: Value): bool =
 proc `==`*[T](a: Value, b: T): bool =
   a == toValue(b)
 
-proc `==`*(a: ValueRef, b: ValueRef): bool =
+func `==`*(a: ValueRef, b: ValueRef): bool =
   if system.`==`(a, nil) or system.`==`(b, nil):
     return system.`==`(a, b)
 
@@ -1049,7 +1053,7 @@ proc `[]`*(v: Value, typ: typedesc): auto =
     result = v.getString()
 
   when typ is times.Time:
-    result = times.timeInfoToTime(v.getTime())
+    result = v.getTime().toTime()
   when typ is times.DateTime:
     result = v.getTime()
 
@@ -1235,97 +1239,134 @@ proc convertString*[T](str: string): T =
 # buildAccessors helper. #
 ##########################
 
-proc buildAccessors*(typeName: string, fields: seq[tuple[name, typ: string]]): string =
+proc buildAccessors*(typeName: NimNode, fields: openArray[tuple[name, typ: NimNode]]): NimNode =
   # Build setProp().
-  var code = "method setProp*[T](o: $1, name: string, val: T) =\n".format(typeName)
-  code &= "  case name\n"
-  for field in fields:
-    code &= """  of "$1": 
-    when T is type(o.$1):
-      o.$1 = val
-    else:
-      when type(o.$1) is T:
-        o.$1 = cast[$1](val)
-      else:
-        when type(o.$1) is seq:
-          if val == nil:
-            o.$1 = nil
+  result = newStmtList()
+
+  proc genCase(
+    caseArg: NimNode, 
+    fields: openArray[tuple[name, typ: NimNode]], 
+    stmExp: proc (name, typ: NimNode): NimNode,
+  ): NimNode =
+    result = newNimNode(nnkCaseStmt)
+    result &= caseArg
+    for (name, typ) in fields:
+      var branch = newNimNode(nnkOfBranch)
+      branch &= newStrLitNode($name)
+      branch &= stmExp(name, typ)
+      result &= branch
+    var elseBranch = newNimNode(nnkElse)
+    let raiseExn = genAst(caseArg):
+      raise newException(Defect, "Unknown field: " & caseArg)
+    elseBranch &= raiseExn
+    result &= elseBranch
+
+  # code &= "  case name\n"
+  # for field in fields:
+  #   code &= """  of "$1": o.$1 = convertString[$2](val)""".format(field.name, field.typ)
+  #   code &= "\n"
+  # code &= """  else: raise newException(Exception, "Unknown field: " & name)"""
+  # code &= "\n\n"
+  block strBlk:
+    let oArg = ident"o"
+    let nameArg = ident"name"
+    let valArg = ident"val"
+    let strCase = genCase(nameArg, fields,
+      proc (name, typ: NimNode): NimNode =
+        genAst(oArg, name, typ, valArg):
+          oArg.name = convertString[typ](valArg)
+    )
+
+    let strMethod = genAst(typeName, oArg, nameArg, valArg, strCase):
+      proc setProp*(oArg: typeName, nameArg: string, valArg: string) =
+        strCase
+
+    result &= strMethod
+
+  block genericBlk:
+    let oArg = ident"o"
+    let nameArg = ident"name"
+    let valArg = ident"val"
+    let tArg = ident"T"
+    let genericCase = genCase(nameArg, fields,
+      proc (nameP, typP: NimNode): NimNode =
+        let msg = fmt"Field {nameP} is {typP}, not "
+        genAst(tArg, oArg, nameP, typP, valArg, msg):
+          when type(oArg.nameP) is T:
+            oArg.nameP = valArg
+          elif type(oArg.nameP) is seq[typP]:
+            var s: seq[typP] = @[]
+            for item in valArg:
+              s &= item
+            oArg.nameP = s
           else:
-            var s: seq[$2] = @[]
-            for item in val:
-              s.add(cast[$2](item))
-            o.$1 = s
-        else:
-          raise newException(Exception, "Field $1 is $2, not " & name(type(T)))""" .format(field.name, field.typ)
-    code &= "\n"
-  code &= """  else: raise newException(Exception, "Unknown field: " & name)"""
-  code &= "\n\n"
-
-  # Build setProp() for strings.
-  code &= "method setProp*(o: $1, name: string, val: string) =\n".format(typeName)
-  code &= "  case name\n"
-  for field in fields:
-    code &= """  of "$1": o.$1 = convertString[$2](val)""".format(field.name, field.typ)
-    code &= "\n"
-  code &= """  else: raise newException(Exception, "Unknown field: " & name)"""
-  code &= "\n\n"
-
-  # Build setValue().
-  code &= "method setValue*(o: $1, name: string, val: Value) =\n".format(typeName)
-  # Check that field exists and determine type.
-  code &= "  var typ = \"\"\n"
-  code &= "  case name\n"
-  for field in fields:
-    var setter = ""
-    case field.typ
-    of "bool":
-      setter = "o.$1 = val.asBool()".format(field.name)
-    of "char":
-      setter = "o.$1 = val.asChar()".format(field.name)
-    of "int", "int8", "int16", "int32", "int64":
-      setter = "o.$1 = $2(val.asBiggestInt())".format(field.name, field.typ)
-    of "uint", "uint8", "uint16", "uint32", "uint64":
-      setter = "o.$1 = $2(val.asBiggestUInt())".format(field.name, field.typ)
-    of "float", "float32", "float64":
-      setter = "o.$1 = $2(val.asBiggestFloat())".format(field.name, field.typ)
-    of "string":
-      setter = "o.$1 = val.asString()".format(field.name)
-    else:
-      continue
-      #raise newException(Exception, "setValue() can't handle type: " & field.typ)
-    
-    code &= "  of \"$1\":\n".format(field.name)
-    code &= "    " & setter & "\n"
-  code &= """  else: raise newException(Exception, "Unknown field: " & name)"""
-  code &= "\n\n"
+            raise newException(Defect, msg & $tArg)
+    )
+    let genericProc = genAst(typeName, tArg, oArg, nameArg, valArg, genericCase):
+      proc setProp*[tArg](oArg: typeName, nameArg: string, valArg: tArg) =
+        genericCase
+    result &= genericProc
   
-  # Build getValue().
-  code &= "method getValue*(o: $1, name: string): Value =\n".format(typeName)
-  code &= "  case name\n"
-  for field in fields:
-    code &= """  of "$1": result = toValue(o.$1)""".format(field.name)
-    code &= "\n"
-  code &= """  else: raise newException(Exception, "Unknown field: " & name)"""
-  code &= "\n\n"
+  block setBlk:
+    let oArg = ident"o"
+    let nameArg = ident"name"
+    let valArg = ident"val"
+    let setCase = genCase(nameArg, fields,
+      proc (name, typ: NimNode): NimNode =
+        case $typ
+        of "bool":
+          genAst(oArg, name, valArg):
+            oArg.name = valArg.asBool()
+        of "char":
+          genAst(oArg, name, valArg):
+            oArg.name = valArg.asChar()
+        of "int", "int8", "int16", "int32", "int64":
+          genAst(oArg, name, typ, valArg):
+            oArg.name = typ(valArg.asBiggestInt())
+        of "uint", "uint8", "uint16", "uint32", "uint64":
+          genAst(oArg, name, typ, valArg):
+            oArg.name = typ(valArg.asBiggestUInt())
+        of "float", "float32", "float64":
+          genAst(oArg, name, typ, valArg):
+            oArg.name = typ(valArg.asBiggestFloat())
+        of "string":
+          genAst(oArg, name, valArg):
+            oArg.name = valArg.asString()
+        else:
+          raise newException(Defect, fmt"setValue() can't handle type: {typ}")
+    )
+    let setProc = genAst(typeName, oArg, nameArg, valArg, setCase):
+      proc setValue*(oArg: typeName, nameArg: string, valArg: Value) =
+        setCase
+    result &= setProc
 
-  return code
+  block getBlk:
+    let oArg = ident"o"
+    let nameArg = ident"name"
+    let getCase = genCase(nameArg, fields,
+      proc (name, typ: NimNode): NimNode =
+        genAst(oArg, name):
+          oArg.name.toValue()
+    )
+    let getProc = genAst(typeName, oArg, nameArg, getCase):
+      proc getValue*(oArg: typeName, nameArg: string): Value =
+        getCase
+    result &= getProc
 
-proc buildAccessors*(node: NimNode): NimNode {.compileTime.} =
+proc buildAccessors*(node: NimNode): NimNode =
   if node.kind != nnkTypeDef:
-    raise newException(Exception, "node must be nnkTypeDef")
+    raise newException(Exception, "node must be nnkTypeDef, not " & $node.kind)
   
   var typeNode = node[0] 
   if typeNode.kind == nnkPostfix:
     typeNode = typeNode[1]
-  var typeName = $typeNode
   
   # Find fields.
-  var fields: seq[tuple[name: string, typ: string]] = @[]
+  var fields: seq[tuple[name, typ: NimNode]] = @[]
   for fieldDef in node[2][0][2]:
     if fieldDef.kind == nnkEmpty or fieldDef.kind == nnkNilLit:
       continue
 
-    fields.add((fieldDef[0].`$`, fieldDef[1].`$`))
+    fields.add((fieldDef[0], fieldDef[1]))
 
-  var code = buildAccessors(typeName, fields)
-  parseStmt(code)
+  result = buildAccessors(typeNode, fields)
